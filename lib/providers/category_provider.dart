@@ -10,6 +10,12 @@ final StateNotifierProvider<CategoryListNotifier, List<Category>>
   (Ref ref) => CategoryListNotifier(ref.watch(databaseServiceProvider)),
 );
 
+final Provider<Map<String, Category>> categoryByIdProvider =
+    Provider<Map<String, Category>>((Ref ref) {
+  final List<Category> all = ref.watch(categoryListProvider);
+  return <String, Category>{for (final Category c in all) c.id: c};
+});
+
 class CategoryListNotifier extends StateNotifier<List<Category>> {
   CategoryListNotifier(this._db) : super(<Category>[]) {
     _refresh();

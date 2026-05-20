@@ -4,6 +4,7 @@ import '../models/budget.dart';
 import '../models/category.dart';
 import '../models/expense.dart';
 import '../utils/constants.dart';
+import '../utils/default_categories.dart';
 
 class DatabaseService {
   DatabaseService._();
@@ -26,6 +27,16 @@ class DatabaseService {
     _expenseBox = await Hive.openBox<Expense>(AppConstants.expenseBoxName);
     _categoryBox = await Hive.openBox<Category>(AppConstants.categoryBoxName);
     _budgetBox = await Hive.openBox<Budget>(AppConstants.budgetBoxName);
+
+    await _seedCategoriesIfEmpty();
+  }
+
+  Future<void> _seedCategoriesIfEmpty() async {
+    if (_categoryBox.isNotEmpty) return;
+    final Map<String, Category> seed = <String, Category>{
+      for (final Category c in DefaultCategories.all()) c.id: c,
+    };
+    await _categoryBox.putAll(seed);
   }
 
   Future<void> close() async {

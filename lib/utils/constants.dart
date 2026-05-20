@@ -11,9 +11,7 @@ class AppConstants {
   static const List<String> paymentMethods = <String>[
     '现金',
     '信用卡',
-    '借记卡',
-    '微信',
     '支付宝',
-    '其他',
+    '微信支付',
   ];
 }
