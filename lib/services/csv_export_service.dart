@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 
 import '../models/category.dart';
@@ -30,18 +31,44 @@ class CsvExportService {
         '${two(d.hour)}:${two(d.minute)}';
   }
 
+  /// Resolve a writable directory. Tries path_provider first, then falls
+  /// back to the user's home Documents folder if the plugin isn't
+  /// registered on the current build (common on Windows hot-reloaded
+  /// builds where generated_plugins.cmake hasn't been regenerated).
+  Future<Directory> _resolveDir() async {
+    try {
+      return await getApplicationDocumentsDirectory();
+    } on MissingPluginException {
+      if (Platform.isWindows) {
+        final String? user = Platform.environment['USERPROFILE'];
+        if (user != null) {
+          final Directory d = Directory('$user\\Documents');
+          if (await d.exists()) return d;
+        }
+      } else if (Platform.isMacOS || Platform.isLinux) {
+        final String? home = Platform.environment['HOME'];
+        if (home != null) {
+          final Directory d = Directory('$home/Documents');
+          if (await d.exists()) return d;
+        }
+      }
+      return Directory.systemTemp;
+    }
+  }
+
   /// `expenses` is rendered in the order given so the file matches what
   /// the user is currently looking at on the history screen.
   Future<File> export({
     required List<Expense> expenses,
     required Map<String, Category> categoryById,
   }) async {
-    final Directory dir = await getApplicationDocumentsDirectory();
+    final Directory dir = await _resolveDir();
     final DateTime now = DateTime.now();
     String two(int n) => n.toString().padLeft(2, '0');
     final String stamp =
         '${now.year}${two(now.month)}${two(now.day)}_${two(now.hour)}${two(now.minute)}${two(now.second)}';
-    final File file = File('${dir.path}${Platform.pathSeparator}expenses_$stamp.csv');
+    final File file =
+        File('${dir.path}${Platform.pathSeparator}expenses_$stamp.csv');
 
     final StringBuffer buf = StringBuffer();
     // UTF-8 BOM so Excel on Windows opens the file with the right
