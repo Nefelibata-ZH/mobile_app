@@ -23,10 +23,12 @@ class SettingsScreen extends StatelessWidget {
             trailing: const Icon(Icons.chevron_right),
             onTap: () => context.go('/settings/categories'),
           ),
-          const ListTile(
-            leading: Icon(Icons.account_balance_wallet),
-            title: Text('预算设置'),
-            subtitle: Text('待实现'),
+          ListTile(
+            leading: const Icon(Icons.account_balance_wallet),
+            title: const Text('预算设置'),
+            subtitle: const Text('为支出类别设置月度额度并跟踪进度'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.go('/settings/budgets'),
           ),
           const ListTile(
             leading: Icon(Icons.brightness_6),

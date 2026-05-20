@@ -3,6 +3,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:go_router/go_router.dart';
 
 import '../screens/add_expense_screen.dart';
+import '../screens/budget_screen.dart';
 import '../screens/category_management_screen.dart';
 import '../screens/history_screen.dart';
 import '../screens/home_screen.dart';
@@ -42,6 +43,11 @@ final GoRouter _router = GoRouter(
               path: 'categories',
               builder: (BuildContext context, GoRouterState state) =>
                   const CategoryManagementScreen(),
+            ),
+            GoRoute(
+              path: 'budgets',
+              builder: (BuildContext context, GoRouterState state) =>
+                  const BudgetScreen(),
             ),
           ],
         ),
