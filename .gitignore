@@ -104,3 +104,6 @@ coverage/
 
 # Office temp files
 ~$*
+
+# Local scratch files (debug outputs, paste buffers)
+输出.txt
