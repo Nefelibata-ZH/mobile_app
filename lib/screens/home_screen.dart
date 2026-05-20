@@ -6,6 +6,7 @@ import '../models/expense.dart';
 import '../providers/category_provider.dart';
 import '../providers/expense_provider.dart';
 import '../providers/statistics_provider.dart';
+import '../utils/formatters.dart';
 import '../widgets/category_pie_chart.dart';
 import '../widgets/expense_card.dart';
 import '../widgets/summary_card.dart';
@@ -93,25 +94,67 @@ class _RecentTransactions extends StatelessWidget {
   }
 }
 
-class _MonthOverviewTab extends ConsumerWidget {
+class _MonthOverviewTab extends ConsumerStatefulWidget {
   const _MonthOverviewTab();
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final Map<String, double> byCategory =
-        ref.watch(rangeExpenseByCategoryProvider);
+  ConsumerState<_MonthOverviewTab> createState() => _MonthOverviewTabState();
+}
+
+class _MonthOverviewTabState extends ConsumerState<_MonthOverviewTab> {
+  bool _showExpense = true;
+
+  @override
+  Widget build(BuildContext context) {
+    final Map<String, double> data = _showExpense
+        ? ref.watch(rangeExpenseByCategoryProvider)
+        : ref.watch(rangeIncomeByCategoryProvider);
+    final Color accent = _showExpense ? AppColors.expense : AppColors.income;
+
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 80),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
           Text(
-            '本月支出占比',
+            _showExpense ? '本月支出占比' : '本月收入占比',
             style: Theme.of(context).textTheme.titleMedium,
           ),
           const SizedBox(height: 12),
+          Center(
+            child: SegmentedButton<bool>(
+              segments: const <ButtonSegment<bool>>[
+                ButtonSegment<bool>(
+                  value: true,
+                  label: Text('支出'),
+                  icon: Icon(Icons.trending_down),
+                ),
+                ButtonSegment<bool>(
+                  value: false,
+                  label: Text('收入'),
+                  icon: Icon(Icons.trending_up),
+                ),
+              ],
+              selected: <bool>{_showExpense},
+              onSelectionChanged: (Set<bool> v) =>
+                  setState(() => _showExpense = v.first),
+              style: ButtonStyle(
+                backgroundColor: WidgetStateProperty.resolveWith<Color?>(
+                  (Set<WidgetState> states) =>
+                      states.contains(WidgetState.selected)
+                          ? accent.withValues(alpha: 0.18)
+                          : null,
+                ),
+                foregroundColor: WidgetStateProperty.resolveWith<Color?>(
+                  (Set<WidgetState> states) =>
+                      states.contains(WidgetState.selected) ? accent : null,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
           CategoryPieChart(
-            byCategory: byCategory,
+            byCategory: data,
             categoryById: ref.watch(categoryByIdProvider),
           ),
           const SizedBox(height: 12),

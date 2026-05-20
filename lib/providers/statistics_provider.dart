@@ -44,6 +44,11 @@ final StateProvider<RangeSelection> rangeSelectionProvider =
   (Ref ref) => const RangeSelection(preset: RangePreset.month),
 );
 
+/// Whether statistics screen is showing expense (true) or income (false).
+/// Shared between the pie tab toggle and the insights bar so they stay in sync.
+final StateProvider<bool> statisticsExpenseModeProvider =
+    StateProvider<bool>((Ref ref) => true);
+
 class Totals {
   const Totals({required this.income, required this.expense});
   final double income;
@@ -167,14 +172,18 @@ class RangeInsights {
 
 final Provider<RangeInsights> rangeInsightsProvider = Provider<RangeInsights>(
   (Ref ref) {
+    final bool expenseMode = ref.watch(statisticsExpenseModeProvider);
     final List<Expense> all = ref.watch(expenseListProvider);
     final DateRange r = ref.watch(rangeSelectionProvider).resolve();
     double total = 0;
     double maxOne = 0;
     final Map<String, int> counts = <String, int>{};
     for (final Expense e in all) {
-      if (!r.contains(e.date) || e.amount >= 0) continue;
-      final double v = -e.amount;
+      if (!r.contains(e.date)) continue;
+      // expense entries have negative amount; income entries have positive.
+      final bool isExpense = e.amount < 0;
+      if (expenseMode != isExpense) continue;
+      final double v = expenseMode ? -e.amount : e.amount;
       total += v;
       if (v > maxOne) maxOne = v;
       counts.update(e.category, (int c) => c + 1, ifAbsent: () => 1);

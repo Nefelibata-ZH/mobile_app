@@ -127,19 +127,13 @@ class _RangeSummary extends ConsumerWidget {
   }
 }
 
-class _PieTab extends ConsumerStatefulWidget {
+class _PieTab extends ConsumerWidget {
   const _PieTab();
 
   @override
-  ConsumerState<_PieTab> createState() => _PieTabState();
-}
-
-class _PieTabState extends ConsumerState<_PieTab> {
-  bool _showExpense = true;
-
-  @override
-  Widget build(BuildContext context) {
-    final Map<String, double> data = _showExpense
+  Widget build(BuildContext context, WidgetRef ref) {
+    final bool showExpense = ref.watch(statisticsExpenseModeProvider);
+    final Map<String, double> data = showExpense
         ? ref.watch(rangeExpenseByCategoryProvider)
         : ref.watch(rangeIncomeByCategoryProvider);
 
@@ -160,21 +154,22 @@ class _PieTabState extends ConsumerState<_PieTab> {
                 icon: Icon(Icons.trending_up),
               ),
             ],
-            selected: <bool>{_showExpense},
-            onSelectionChanged: (Set<bool> v) =>
-                setState(() => _showExpense = v.first),
+            selected: <bool>{showExpense},
+            onSelectionChanged: (Set<bool> v) => ref
+                .read(statisticsExpenseModeProvider.notifier)
+                .state = v.first,
             style: ButtonStyle(
               backgroundColor: WidgetStateProperty.resolveWith<Color?>(
                 (Set<WidgetState> states) {
                   if (!states.contains(WidgetState.selected)) return null;
-                  return (_showExpense ? AppColors.expense : AppColors.income)
+                  return (showExpense ? AppColors.expense : AppColors.income)
                       .withValues(alpha: 0.18);
                 },
               ),
               foregroundColor: WidgetStateProperty.resolveWith<Color?>(
                 (Set<WidgetState> states) {
                   if (!states.contains(WidgetState.selected)) return null;
-                  return _showExpense ? AppColors.expense : AppColors.income;
+                  return showExpense ? AppColors.expense : AppColors.income;
                 },
               ),
             ),
@@ -243,6 +238,7 @@ class _InsightsBar extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final bool expenseMode = ref.watch(statisticsExpenseModeProvider);
     final RangeInsights insights = ref.watch(rangeInsightsProvider);
     final Map<String, Category> map = ref.watch(categoryByIdProvider);
     final Category? top =
@@ -256,7 +252,7 @@ class _InsightsBar extends ConsumerWidget {
             Expanded(
               child: _InsightTile(
                 icon: Icons.calendar_view_day,
-                label: '日均支出',
+                label: expenseMode ? '日均支出' : '日均收入',
                 value: Formatters.currency(insights.dailyExpenseAvg),
               ),
             ),
