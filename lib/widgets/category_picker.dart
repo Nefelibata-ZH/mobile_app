@@ -27,41 +27,58 @@ class CategoryPicker extends StatelessWidget {
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 4,
-        mainAxisSpacing: 12,
-        crossAxisSpacing: 12,
-        childAspectRatio: 0.85,
+        crossAxisCount: 5,
+        mainAxisSpacing: 8,
+        crossAxisSpacing: 8,
+        childAspectRatio: 1.0,
       ),
       itemCount: categories.length,
       itemBuilder: (BuildContext context, int index) {
         final Category c = categories[index];
         final bool selected = c.id == selectedId;
         final Color color = Color(c.color);
-        return InkWell(
-          borderRadius: BorderRadius.circular(12),
-          onTap: () => onSelect(c),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: <Widget>[
-              CircleAvatar(
-                radius: 22,
-                backgroundColor: selected
-                    ? color
-                    : color.withValues(alpha: 0.18),
-                child: Icon(
-                  IconCatalog.resolve(c.icon),
-                  color: selected ? Colors.white : color,
+        return Material(
+          color: selected
+              ? color.withValues(alpha: 0.18)
+              : Theme.of(context).colorScheme.surfaceContainerHighest,
+          borderRadius: BorderRadius.circular(10),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(10),
+            onTap: () => onSelect(c),
+            child: Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: selected
+                      ? color
+                      : Theme.of(context).colorScheme.outlineVariant,
+                  width: selected ? 1.5 : 1,
                 ),
               ),
-              const SizedBox(height: 6),
-              Text(
-                c.name,
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
-                ),
+              padding: const EdgeInsets.all(4),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: <Widget>[
+                  Icon(
+                    IconCatalog.resolve(c.icon),
+                    size: 22,
+                    color: selected ? color : color.withValues(alpha: 0.85),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    c.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: selected ? color : null,
+                      fontWeight:
+                          selected ? FontWeight.w600 : FontWeight.w400,
+                    ),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
         );
       },

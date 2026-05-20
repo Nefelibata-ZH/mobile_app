@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -7,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../models/expense.dart';
 import '../providers/category_provider.dart';
 import '../providers/expense_filter_provider.dart';
+import '../services/csv_export_result.dart';
 import '../services/csv_export_service.dart';
 import '../utils/formatters.dart';
 import '../widgets/expense_card.dart';
@@ -50,14 +49,17 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
       return;
     }
     try {
-      final File file = await const CsvExportService().export(
+      final CsvExportResult result = await const CsvExportService().export(
         expenses: rows,
         categoryById: ref.read(categoryByIdProvider),
       );
       if (!mounted) return;
+      final String message = result.savedToDisk
+          ? '已导出 ${rows.length} 条到 ${result.location}'
+          : '已下载 ${rows.length} 条到浏览器：${result.location}';
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('已导出 ${rows.length} 条到 ${file.path}'),
+          content: Text(message),
           duration: const Duration(seconds: 6),
         ),
       );
