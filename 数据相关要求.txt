@@ -1,0 +1,26 @@
+请帮我定义记账本的核心数据模型，包含以下类：
+
+1. Expense 类：
+   - id: String (uuid)
+   - amount: double (金额，正数表示收入，负数表示支出)
+   - category: String (类别，如"餐饮"、"交通"等)
+   - date: DateTime (日期)
+   - note: String? (可选备注)
+   - paymentMethod: String (支付方式，如"现金"、"信用卡")
+   - 包含 toJson() 和 fromJson() 方法
+
+2. Category 类：
+   - id: String
+   - name: String
+   - icon: String (Material Icon 名称)
+   - color: int
+   - type: String ("income" 或 "expense")
+
+3. Budget 类：
+   - id: String
+   - categoryId: String
+   - amount: double (预算金额)
+   - month: int (月份)
+   - year: int (年份)
+
+请使用 Hive 注解，确保这些类可以被 Hive 正确存储。
