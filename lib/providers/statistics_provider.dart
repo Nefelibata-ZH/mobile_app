@@ -180,7 +180,6 @@ final Provider<RangeInsights> rangeInsightsProvider = Provider<RangeInsights>(
     final Map<String, int> counts = <String, int>{};
     for (final Expense e in all) {
       if (!r.contains(e.date)) continue;
-      // expense entries have negative amount; income entries have positive.
       final bool isExpense = e.amount < 0;
       if (expenseMode != isExpense) continue;
       final double v = expenseMode ? -e.amount : e.amount;
@@ -188,7 +187,15 @@ final Provider<RangeInsights> rangeInsightsProvider = Provider<RangeInsights>(
       if (v > maxOne) maxOne = v;
       counts.update(e.category, (int c) => c + 1, ifAbsent: () => 1);
     }
-    final int days = r.end.difference(r.start).inDays.clamp(1, 1000000);
+    // Daily average uses *elapsed* days only — for the current month or year
+    // the user hasn't lived through every day yet, so dividing by 30/31/365
+    // would understate spend. Cap the range end at tomorrow midnight so a
+    // past or future custom range still behaves sensibly.
+    final DateTime now = DateTime.now();
+    final DateTime tomorrow = DateTime(now.year, now.month, now.day + 1);
+    final DateTime effectiveEnd = r.end.isAfter(tomorrow) ? tomorrow : r.end;
+    final int days =
+        effectiveEnd.difference(r.start).inDays.clamp(1, 1000000);
     String? top;
     int topCount = 0;
     counts.forEach((String k, int v) {
