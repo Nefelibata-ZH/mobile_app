@@ -7,6 +7,7 @@ import '../providers/category_provider.dart';
 import '../providers/statistics_provider.dart';
 import '../utils/formatters.dart';
 import '../utils/icon_catalog.dart';
+import '../widgets/budget_progress_summary.dart';
 import '../widgets/category_pie_chart.dart';
 import '../widgets/summary_card.dart';
 import '../widgets/trend_line_chart.dart';
@@ -179,6 +180,8 @@ class _PieTab extends ConsumerWidget {
             byCategory: data,
             categoryById: ref.watch(categoryByIdProvider),
           ),
+          const SizedBox(height: 8),
+          const BudgetProgressSummary(),
         ],
       ),
     );

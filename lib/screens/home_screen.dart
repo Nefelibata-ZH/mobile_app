@@ -7,6 +7,7 @@ import '../providers/category_provider.dart';
 import '../providers/expense_provider.dart';
 import '../providers/statistics_provider.dart';
 import '../utils/formatters.dart';
+import '../widgets/budget_progress_summary.dart';
 import '../widgets/category_pie_chart.dart';
 import '../widgets/expense_card.dart';
 import '../widgets/summary_card.dart';
@@ -158,6 +159,7 @@ class _MonthOverviewTabState extends ConsumerState<_MonthOverviewTab> {
             categoryById: ref.watch(categoryByIdProvider),
           ),
           const SizedBox(height: 12),
+          const BudgetProgressSummary(),
           Center(
             child: TextButton.icon(
               onPressed: () => context.go('/statistics'),

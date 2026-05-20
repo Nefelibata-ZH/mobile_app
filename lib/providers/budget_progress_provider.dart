@@ -59,12 +59,11 @@ class BudgetProgress {
   bool get isWarning => !isOver && ratio >= 0.8;
 }
 
-/// Budgets for the selected month, joined with that month's actual spend
-/// per category. Sorted with over-budget first, then by descending ratio so
-/// the user sees the most urgent rows at the top.
-final Provider<List<BudgetProgress>> budgetProgressProvider =
-    Provider<List<BudgetProgress>>((Ref ref) {
-  final BudgetMonth m = ref.watch(selectedBudgetMonthProvider);
+/// Per-category budget rows for an arbitrary month. Sorted with over-budget
+/// first, then by descending spend ratio so the most urgent rows surface.
+final ProviderFamily<List<BudgetProgress>, BudgetMonth>
+    budgetProgressForMonthProvider =
+    Provider.family<List<BudgetProgress>, BudgetMonth>((Ref ref, BudgetMonth m) {
   final List<Budget> budgets = ref
       .watch(budgetListProvider)
       .where((Budget b) =>
@@ -101,11 +100,11 @@ final Provider<List<BudgetProgress>> budgetProgressProvider =
   return result;
 });
 
-/// Total-month-budget row, if the user has set one. Spend is the sum of
-/// every expense in the selected month — independent of category budgets.
-final Provider<BudgetProgress?> totalBudgetProgressProvider =
-    Provider<BudgetProgress?>((Ref ref) {
-  final BudgetMonth m = ref.watch(selectedBudgetMonthProvider);
+/// Total-month-budget row for an arbitrary month. Returns null when the
+/// user hasn't set a total budget for that month.
+final ProviderFamily<BudgetProgress?, BudgetMonth>
+    totalBudgetProgressForMonthProvider =
+    Provider.family<BudgetProgress?, BudgetMonth>((Ref ref, BudgetMonth m) {
   Budget? total;
   for (final Budget b in ref.watch(budgetListProvider)) {
     if (b.year == m.year &&
@@ -124,6 +123,18 @@ final Provider<BudgetProgress?> totalBudgetProgressProvider =
   }
   return BudgetProgress(budget: total, spent: spent);
 });
+
+/// Budgets for the month currently picked on the budget screen.
+final Provider<List<BudgetProgress>> budgetProgressProvider =
+    Provider<List<BudgetProgress>>((Ref ref) => ref.watch(
+        budgetProgressForMonthProvider(
+            ref.watch(selectedBudgetMonthProvider))));
+
+/// Total-month-budget for the month currently picked on the budget screen.
+final Provider<BudgetProgress?> totalBudgetProgressProvider =
+    Provider<BudgetProgress?>((Ref ref) => ref.watch(
+        totalBudgetProgressForMonthProvider(
+            ref.watch(selectedBudgetMonthProvider))));
 
 /// Aggregate totals for the month — used for the screen header card.
 class BudgetSummary {
