@@ -15,18 +15,20 @@ class SettingsScreen extends StatelessWidget {
         ),
       ),
       body: ListView(
-        children: const <Widget>[
+        children: <Widget>[
           ListTile(
-            leading: Icon(Icons.category),
-            title: Text('类别管理'),
-            subtitle: Text('待实现'),
+            leading: const Icon(Icons.category),
+            title: const Text('类别管理'),
+            subtitle: const Text('新增、编辑、删除支出与收入类别'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.go('/settings/categories'),
           ),
-          ListTile(
+          const ListTile(
             leading: Icon(Icons.account_balance_wallet),
             title: Text('预算设置'),
             subtitle: Text('待实现'),
           ),
-          ListTile(
+          const ListTile(
             leading: Icon(Icons.brightness_6),
             title: Text('主题'),
             subtitle: Text('跟随系统'),

@@ -3,6 +3,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:go_router/go_router.dart';
 
 import '../screens/add_expense_screen.dart';
+import '../screens/category_management_screen.dart';
 import '../screens/history_screen.dart';
 import '../screens/home_screen.dart';
 import '../screens/settings_screen.dart';
@@ -36,6 +37,13 @@ final GoRouter _router = GoRouter(
           path: 'settings',
           builder: (BuildContext context, GoRouterState state) =>
               const SettingsScreen(),
+          routes: <RouteBase>[
+            GoRoute(
+              path: 'categories',
+              builder: (BuildContext context, GoRouterState state) =>
+                  const CategoryManagementScreen(),
+            ),
+          ],
         ),
       ],
     ),
