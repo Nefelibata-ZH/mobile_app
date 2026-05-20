@@ -102,6 +102,23 @@ final Provider<Map<String, double>> rangeExpenseByCategoryProvider =
   return by;
 });
 
+final Provider<Map<String, double>> rangeIncomeByCategoryProvider =
+    Provider<Map<String, double>>((Ref ref) {
+  final List<Expense> all = ref.watch(expenseListProvider);
+  final DateRange r = ref.watch(rangeSelectionProvider).resolve();
+  final Map<String, double> by = <String, double>{};
+  for (final Expense e in all) {
+    if (!r.contains(e.date)) continue;
+    if (e.amount <= 0) continue;
+    by.update(
+      e.category,
+      (double v) => v + e.amount,
+      ifAbsent: () => e.amount,
+    );
+  }
+  return by;
+});
+
 class TrendPoint {
   const TrendPoint({required this.date, required this.income, required this.expense});
   final DateTime date;

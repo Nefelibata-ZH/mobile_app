@@ -127,16 +127,64 @@ class _RangeSummary extends ConsumerWidget {
   }
 }
 
-class _PieTab extends ConsumerWidget {
+class _PieTab extends ConsumerStatefulWidget {
   const _PieTab();
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_PieTab> createState() => _PieTabState();
+}
+
+class _PieTabState extends ConsumerState<_PieTab> {
+  bool _showExpense = true;
+
+  @override
+  Widget build(BuildContext context) {
+    final Map<String, double> data = _showExpense
+        ? ref.watch(rangeExpenseByCategoryProvider)
+        : ref.watch(rangeIncomeByCategoryProvider);
+
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-      child: CategoryPieChart(
-        byCategory: ref.watch(rangeExpenseByCategoryProvider),
-        categoryById: ref.watch(categoryByIdProvider),
+      child: Column(
+        children: <Widget>[
+          SegmentedButton<bool>(
+            segments: const <ButtonSegment<bool>>[
+              ButtonSegment<bool>(
+                value: true,
+                label: Text('支出'),
+                icon: Icon(Icons.trending_down),
+              ),
+              ButtonSegment<bool>(
+                value: false,
+                label: Text('收入'),
+                icon: Icon(Icons.trending_up),
+              ),
+            ],
+            selected: <bool>{_showExpense},
+            onSelectionChanged: (Set<bool> v) =>
+                setState(() => _showExpense = v.first),
+            style: ButtonStyle(
+              backgroundColor: WidgetStateProperty.resolveWith<Color?>(
+                (Set<WidgetState> states) {
+                  if (!states.contains(WidgetState.selected)) return null;
+                  return (_showExpense ? AppColors.expense : AppColors.income)
+                      .withValues(alpha: 0.18);
+                },
+              ),
+              foregroundColor: WidgetStateProperty.resolveWith<Color?>(
+                (Set<WidgetState> states) {
+                  if (!states.contains(WidgetState.selected)) return null;
+                  return _showExpense ? AppColors.expense : AppColors.income;
+                },
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          CategoryPieChart(
+            byCategory: data,
+            categoryById: ref.watch(categoryByIdProvider),
+          ),
+        ],
       ),
     );
   }

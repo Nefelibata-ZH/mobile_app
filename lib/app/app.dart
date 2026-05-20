@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:go_router/go_router.dart';
 
 import '../screens/add_expense_screen.dart';
@@ -52,6 +53,16 @@ class ExpenseTrackerApp extends StatelessWidget {
       darkTheme: AppTheme.dark,
       themeMode: ThemeMode.system,
       routerConfig: _router,
+      locale: const Locale('zh', 'CN'),
+      supportedLocales: const <Locale>[
+        Locale('zh', 'CN'),
+        Locale('en', 'US'),
+      ],
+      localizationsDelegates: const <LocalizationsDelegate<Object>>[
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
       debugShowCheckedModeBanner: false,
     );
   }
