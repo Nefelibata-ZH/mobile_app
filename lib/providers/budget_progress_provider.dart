@@ -5,6 +5,10 @@ import '../models/expense.dart';
 import 'budget_provider.dart';
 import 'expense_provider.dart';
 
+/// Sentinel categoryId reserved for the per-month *total* budget. Stored
+/// inside the existing Hive box so we don't have to migrate the schema.
+const String kTotalBudgetCategoryId = '__total__';
+
 class BudgetMonth {
   const BudgetMonth({required this.year, required this.month});
   final int year;
@@ -63,7 +67,10 @@ final Provider<List<BudgetProgress>> budgetProgressProvider =
   final BudgetMonth m = ref.watch(selectedBudgetMonthProvider);
   final List<Budget> budgets = ref
       .watch(budgetListProvider)
-      .where((Budget b) => b.year == m.year && b.month == m.month)
+      .where((Budget b) =>
+          b.year == m.year &&
+          b.month == m.month &&
+          b.categoryId != kTotalBudgetCategoryId)
       .toList();
   if (budgets.isEmpty) return const <BudgetProgress>[];
 
@@ -92,6 +99,30 @@ final Provider<List<BudgetProgress>> budgetProgressProvider =
       return b.ratio.compareTo(a.ratio);
     });
   return result;
+});
+
+/// Total-month-budget row, if the user has set one. Spend is the sum of
+/// every expense in the selected month — independent of category budgets.
+final Provider<BudgetProgress?> totalBudgetProgressProvider =
+    Provider<BudgetProgress?>((Ref ref) {
+  final BudgetMonth m = ref.watch(selectedBudgetMonthProvider);
+  Budget? total;
+  for (final Budget b in ref.watch(budgetListProvider)) {
+    if (b.year == m.year &&
+        b.month == m.month &&
+        b.categoryId == kTotalBudgetCategoryId) {
+      total = b;
+      break;
+    }
+  }
+  if (total == null) return null;
+  double spent = 0;
+  for (final Expense e in ref.watch(expenseListProvider)) {
+    if (e.amount >= 0) continue;
+    if (!m.contains(e.date)) continue;
+    spent += -e.amount;
+  }
+  return BudgetProgress(budget: total, spent: spent);
 });
 
 /// Aggregate totals for the month — used for the screen header card.

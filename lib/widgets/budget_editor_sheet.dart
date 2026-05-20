@@ -16,10 +16,16 @@ class BudgetEditorSheet extends ConsumerStatefulWidget {
     super.key,
     required this.initial,
     required this.month,
+    this.isTotal = false,
   });
 
   final Budget? initial;
   final BudgetMonth month;
+
+  /// When true the sheet edits the per-month total budget instead of a
+  /// per-category one. The category picker is hidden and the special
+  /// `kTotalBudgetCategoryId` sentinel is used as the category id.
+  final bool isTotal;
 
   @override
   ConsumerState<BudgetEditorSheet> createState() =>
@@ -40,6 +46,8 @@ class _BudgetEditorSheetState extends ConsumerState<BudgetEditorSheet> {
               b.amount
           ? 0
           : 2);
+    } else if (widget.isTotal) {
+      _categoryId = kTotalBudgetCategoryId;
     }
   }
 
@@ -54,13 +62,15 @@ class _BudgetEditorSheetState extends ConsumerState<BudgetEditorSheet> {
 
   Future<void> _save() async {
     final String? err = Validators.amount(_amount.text);
-    if (err != null || _categoryId == null) return;
+    if (err != null) return;
+    final String? catId = widget.isTotal ? kTotalBudgetCategoryId : _categoryId;
+    if (catId == null) return;
     final double amt = double.parse(_amount.text.trim()).abs();
     final Budget? existing = widget.initial;
     final Budget next = existing == null
         ? Budget(
-            id: _idFor(widget.month.year, widget.month.month, _categoryId!),
-            categoryId: _categoryId!,
+            id: _idFor(widget.month.year, widget.month.month, catId),
+            categoryId: catId,
             amount: amt,
             month: widget.month.month,
             year: widget.month.year,
@@ -73,6 +83,7 @@ class _BudgetEditorSheetState extends ConsumerState<BudgetEditorSheet> {
   @override
   Widget build(BuildContext context) {
     final bool isEdit = widget.initial != null;
+    final bool isTotal = widget.isTotal;
     final Map<String, Category> map = ref.watch(categoryByIdProvider);
     // Only expense categories get budgets — income doesn't have a "limit".
     final List<Category> all = ref
@@ -91,10 +102,14 @@ class _BudgetEditorSheetState extends ConsumerState<BudgetEditorSheet> {
         ? all
         : all.where((Category c) => !taken.contains(c.id)).toList();
 
-    final Category? selected =
-        _categoryId == null ? null : map[_categoryId];
-    final Color accent =
-        selected == null ? AppColors.expense : Color(selected.color);
+    final Category? selected = isTotal || _categoryId == null
+        ? null
+        : map[_categoryId];
+    final Color accent = isTotal
+        ? AppColors.balance
+        : selected == null
+            ? AppColors.expense
+            : Color(selected.color);
 
     return Padding(
       padding: EdgeInsets.only(
@@ -120,18 +135,37 @@ class _BudgetEditorSheetState extends ConsumerState<BudgetEditorSheet> {
                 ),
               ),
               Text(
-                isEdit ? '编辑预算' : '新建预算',
+                isTotal
+                    ? (isEdit ? '编辑总预算' : '设置总预算')
+                    : (isEdit ? '编辑预算' : '新建预算'),
                 style: Theme.of(context).textTheme.titleLarge,
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 4),
               Text(
-                '${widget.month.label} 月度预算',
+                isTotal
+                    ? '${widget.month.label} 月度总额度（覆盖所有类别）'
+                    : '${widget.month.label} 月度预算',
                 style: Theme.of(context).textTheme.bodySmall,
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 16),
-              if (isEdit && selected != null)
+              if (isTotal)
+                ListTile(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    side: BorderSide(
+                      color: Theme.of(context).colorScheme.outlineVariant,
+                    ),
+                  ),
+                  leading: CircleAvatar(
+                    backgroundColor: accent.withValues(alpha: 0.18),
+                    child: Icon(Icons.savings, color: accent),
+                  ),
+                  title: const Text('全部支出'),
+                  subtitle: const Text('总预算与各类别预算独立，不会互相累加'),
+                )
+              else if (isEdit && selected != null)
                 ListTile(
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10),
@@ -156,7 +190,7 @@ class _BudgetEditorSheetState extends ConsumerState<BudgetEditorSheet> {
                   onSelect: (String id) =>
                       setState(() => _categoryId = id),
                 ),
-              if (!isEdit && selectable.isEmpty)
+              if (!isTotal && !isEdit && selectable.isEmpty)
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 8),
                   child: Text(
@@ -221,10 +255,12 @@ class _BudgetEditorSheetState extends ConsumerState<BudgetEditorSheet> {
     );
   }
 
-  bool _canSave() =>
-      _categoryId != null &&
-      Validators.amount(_amount.text) == null &&
-      double.tryParse(_amount.text.trim()) != 0;
+  bool _canSave() {
+    if (Validators.amount(_amount.text) != null) return false;
+    if (double.tryParse(_amount.text.trim()) == 0) return false;
+    if (widget.isTotal) return true;
+    return _categoryId != null;
+  }
 }
 
 class _CategoryGrid extends StatelessWidget {

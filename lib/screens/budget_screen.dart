@@ -18,6 +18,7 @@ class BudgetScreen extends ConsumerWidget {
     final BudgetMonth month = ref.watch(selectedBudgetMonthProvider);
     final List<BudgetProgress> rows = ref.watch(budgetProgressProvider);
     final BudgetSummary summary = ref.watch(budgetSummaryProvider);
+    final BudgetProgress? totalRow = ref.watch(totalBudgetProgressProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -30,7 +31,7 @@ class BudgetScreen extends ConsumerWidget {
       body: Column(
         children: <Widget>[
           _MonthSwitcher(month: month),
-          if (rows.isNotEmpty) _SummaryCard(summary: summary),
+          _TotalBudgetCard(progress: totalRow, fallbackSummary: summary),
           Expanded(
             child: rows.isEmpty
                 ? const _EmptyState()
@@ -109,18 +110,37 @@ class _MonthSwitcher extends ConsumerWidget {
   }
 }
 
-class _SummaryCard extends StatelessWidget {
-  const _SummaryCard({required this.summary});
-  final BudgetSummary summary;
+class _TotalBudgetCard extends ConsumerWidget {
+  const _TotalBudgetCard({
+    required this.progress,
+    required this.fallbackSummary,
+  });
+
+  /// Real total budget when the user has set one for this month.
+  final BudgetProgress? progress;
+
+  /// Used only when no total budget is set — shows the live month
+  /// spend so the card still feels useful.
+  final BudgetSummary fallbackSummary;
 
   @override
-  Widget build(BuildContext context) {
-    final Color color = summary.ratio > 1
+  Widget build(BuildContext context, WidgetRef ref) {
+    final BudgetMonth month = ref.watch(selectedBudgetMonthProvider);
+    if (progress == null) {
+      return _NoTotalBudgetCard(
+        month: month,
+        spentSoFar: fallbackSummary.totalSpent,
+      );
+    }
+    final BudgetProgress p = progress!;
+    final Color color = p.isOver
         ? AppColors.expense
-        : summary.ratio >= 0.8
+        : p.isWarning
             ? Colors.orange
             : AppColors.balance;
-    final double ratio = summary.ratio.clamp(0, 1).toDouble();
+    final double clamped = p.ratio.clamp(0, 1).toDouble();
+    final int pct = (p.ratio * 100).round();
+
     return Card(
       elevation: 0,
       margin: const EdgeInsets.fromLTRB(12, 4, 12, 8),
@@ -130,52 +150,154 @@ class _SummaryCard extends StatelessWidget {
           color: Theme.of(context).colorScheme.outlineVariant,
         ),
       ),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            Row(
-              children: <Widget>[
-                const Text('本月总预算',
-                    style: TextStyle(fontWeight: FontWeight.w600)),
-                const Spacer(),
-                if (summary.overCount > 0)
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 8, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: AppColors.expense.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Text(
-                      '${summary.overCount} 项超支',
-                      style: const TextStyle(
-                          color: AppColors.expense, fontSize: 12),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: () => showModalBottomSheet<void>(
+          context: context,
+          isScrollControlled: true,
+          builder: (_) => BudgetEditorSheet(
+            initial: p.budget,
+            month: month,
+            isTotal: true,
+          ),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Row(
+                children: <Widget>[
+                  Icon(Icons.savings, color: color),
+                  const SizedBox(width: 8),
+                  const Text(
+                    '本月总预算',
+                    style: TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  const Spacer(),
+                  IconButton(
+                    icon: const Icon(Icons.delete_outline, size: 20),
+                    tooltip: '删除总预算',
+                    onPressed: () async {
+                      final bool? ok = await showDialog<bool>(
+                        context: context,
+                        builder: (BuildContext ctx) => AlertDialog(
+                          title: const Text('删除总预算'),
+                          content: const Text('删除后将不再显示总预算进度。'),
+                          actions: <Widget>[
+                            TextButton(
+                              onPressed: () => Navigator.of(ctx).pop(false),
+                              child: const Text('取消'),
+                            ),
+                            FilledButton(
+                              onPressed: () => Navigator.of(ctx).pop(true),
+                              child: const Text('删除'),
+                            ),
+                          ],
+                        ),
+                      );
+                      if (ok ?? false) {
+                        await ref
+                            .read(budgetListProvider.notifier)
+                            .remove(p.budget.id);
+                      }
+                    },
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: LinearProgressIndicator(
+                  value: clamped == 0 ? null : clamped,
+                  minHeight: 12,
+                  backgroundColor: color.withValues(alpha: 0.12),
+                  valueColor: AlwaysStoppedAnimation<Color>(color),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: <Widget>[
+                  Text(
+                    '${Formatters.currency(p.spent)} / ${Formatters.currency(p.budget.amount)}',
+                  ),
+                  Text(
+                    p.isOver
+                        ? '已超支 ${Formatters.currency(p.spent - p.budget.amount)}（$pct%）'
+                        : '剩余 ${Formatters.currency(p.remaining)}（$pct%）',
+                    style: TextStyle(
+                      color: color,
+                      fontWeight: FontWeight.w500,
                     ),
                   ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: LinearProgressIndicator(
-                value: ratio == 0 ? null : ratio,
-                minHeight: 10,
-                backgroundColor: color.withValues(alpha: 0.12),
-                valueColor: AlwaysStoppedAnimation<Color>(color),
+                ],
               ),
-            ),
-            const SizedBox(height: 8),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: <Widget>[
-                Text('已用 ${Formatters.currency(summary.totalSpent)}'),
-                Text('额度 ${Formatters.currency(summary.totalBudget)}',
-                    style: Theme.of(context).textTheme.bodySmall),
-              ],
-            ),
-          ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _NoTotalBudgetCard extends StatelessWidget {
+  const _NoTotalBudgetCard({
+    required this.month,
+    required this.spentSoFar,
+  });
+  final BudgetMonth month;
+  final double spentSoFar;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      elevation: 0,
+      margin: const EdgeInsets.fromLTRB(12, 4, 12, 8),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(14),
+        side: BorderSide(
+          color: Theme.of(context).colorScheme.outlineVariant,
+        ),
+      ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: () => showModalBottomSheet<void>(
+          context: context,
+          isScrollControlled: true,
+          builder: (_) => BudgetEditorSheet(
+            initial: null,
+            month: month,
+            isTotal: true,
+          ),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
+          child: Row(
+            children: <Widget>[
+              Icon(
+                Icons.savings_outlined,
+                color: Theme.of(context).colorScheme.outline,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    const Text(
+                      '本月还没有总预算',
+                      style: TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                    Text(
+                      '点这里设置总额度，已花 ${Formatters.currency(spentSoFar)}',
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.add_circle_outline),
+            ],
+          ),
         ),
       ),
     );
