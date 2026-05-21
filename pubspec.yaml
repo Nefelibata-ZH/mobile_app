@@ -32,6 +32,13 @@ dependencies:
   intl: ^0.20.2
   uuid: ^4.4.0
 
+  # Voice journaling: on-device speech-to-text + secure storage for the
+  # OpenAI API key + http client for the chat-completions call.
+  speech_to_text: ^7.0.0
+  permission_handler: ^11.3.1
+  flutter_secure_storage: ^9.2.2
+  http: ^1.2.2
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

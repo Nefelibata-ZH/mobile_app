@@ -30,6 +30,13 @@ class SettingsScreen extends StatelessWidget {
             trailing: const Icon(Icons.chevron_right),
             onTap: () => context.go('/settings/budgets'),
           ),
+          ListTile(
+            leading: const Icon(Icons.mic_none),
+            title: const Text('AI 语音记账'),
+            subtitle: const Text('配置 OpenAI 接口，开启语音转账单'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.go('/settings/ai'),
+          ),
           const ListTile(
             leading: Icon(Icons.brightness_6),
             title: Text('主题'),

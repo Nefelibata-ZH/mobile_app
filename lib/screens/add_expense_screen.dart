@@ -4,12 +4,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../models/category.dart';
+import '../providers/ai_config_provider.dart';
 import '../providers/category_provider.dart';
 import '../providers/expense_provider.dart';
+import '../services/ai_extract_service.dart';
 import '../utils/constants.dart';
 import '../utils/formatters.dart';
 import '../utils/validators.dart';
 import '../widgets/category_picker.dart';
+import '../widgets/voice_capture_sheet.dart';
 
 class AddExpenseScreen extends ConsumerStatefulWidget {
   const AddExpenseScreen({super.key});
@@ -70,6 +73,58 @@ class _AddExpenseScreenState extends ConsumerState<AddExpenseScreen> {
     if (picked != null) setState(() => _date = picked);
   }
 
+  Future<void> _voiceCapture() async {
+    final AiExtractedExpense? result =
+        await showModalBottomSheet<AiExtractedExpense>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => const VoiceCaptureSheet(),
+    );
+    if (result == null || !mounted) return;
+    _applyExtracted(result);
+  }
+
+  void _applyExtracted(AiExtractedExpense r) {
+    // Treat each field as best-effort: only overwrite when the model
+    // returned something usable, so the user's existing edits aren't
+    // wiped by null/empty values.
+    setState(() {
+      if (r.kind != null) _isExpense = r.kind == 'expense';
+      if (r.amount != null && r.amount! > 0) {
+        _amountController.text = r.amount!.toStringAsFixed(
+            r.amount!.truncateToDouble() == r.amount! ? 0 : 2);
+      }
+      if (r.categoryId != null) _categoryId = r.categoryId;
+      if (r.paymentMethod != null) _paymentMethod = r.paymentMethod!;
+      if (r.date != null) _date = r.date!;
+      // Note: prefer the model's polished note, but if extraction failed
+      // and only the raw transcript came back, keep that so the user's
+      // words survive a round-trip.
+      final String? noteToUse = r.note ?? r.rawTranscript;
+      if (noteToUse != null && noteToUse.trim().isNotEmpty) {
+        _noteController.text = noteToUse.trim();
+      }
+    });
+    _recomputeCanSubmit();
+    final List<String> filled = <String>[
+      if (r.kind != null) (r.kind == 'expense' ? '支出/收入' : '支出/收入'),
+      if (r.amount != null) '金额',
+      if (r.categoryId != null) '类别',
+      if (r.paymentMethod != null) '支付方式',
+      if (r.date != null) '日期',
+    ];
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          filled.isEmpty
+              ? '已填入备注，请手动补全其余字段'
+              : '已填入：${filled.join('、')}，请确认无误后保存',
+        ),
+        duration: const Duration(seconds: 4),
+      ),
+    );
+  }
+
   Future<void> _submit() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
     if (_categoryId == null) return;
@@ -114,6 +169,14 @@ class _AddExpenseScreenState extends ConsumerState<AddExpenseScreen> {
           icon: const Icon(Icons.close),
           onPressed: () => context.go('/'),
         ),
+        actions: <Widget>[
+          if (ref.watch(aiConfigProvider).isUsable)
+            IconButton(
+              icon: const Icon(Icons.mic_none),
+              tooltip: '语音记账',
+              onPressed: _voiceCapture,
+            ),
+        ],
       ),
       body: Form(
         key: _formKey,
