@@ -1,5 +1,7 @@
+import 'dart:async';
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:http/http.dart' as http;
 
 import '../models/category.dart';
@@ -120,16 +122,37 @@ ${jsonEncode(paymentMethods)}
       ],
     };
 
-    final http.Response resp = await http
-        .post(
-          url,
-          headers: <String, String>{
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer ${config.apiKey}',
-          },
-          body: utf8.encode(jsonEncode(body)),
-        )
-        .timeout(const Duration(seconds: 30));
+    final http.Response resp;
+    try {
+      resp = await http
+          .post(
+            url,
+            headers: <String, String>{
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer ${config.apiKey}',
+            },
+            body: utf8.encode(jsonEncode(body)),
+          )
+          .timeout(const Duration(seconds: 30));
+    } on TimeoutException {
+      throw const AiExtractException('请求超时（30 秒），请检查网络');
+    } on http.ClientException catch (e) {
+      // On Flutter Web "Failed to fetch" almost always means CORS — the
+      // LLM provider doesn't return Access-Control-Allow-Origin so the
+      // browser blocks the request before it leaves. Native http isn't
+      // affected. Surface this as a clear, actionable message instead
+      // of the raw network exception.
+      if (kIsWeb) {
+        throw AiExtractException(
+          '浏览器无法跨域调用该 API（CORS 限制）。'
+          '请改用桌面端或移动端 App 运行，或自建支持 CORS 的代理。'
+          '原始错误：${e.message}',
+        );
+      }
+      throw AiExtractException('网络错误：${e.message}');
+    } catch (e) {
+      throw AiExtractException('请求失败：$e');
+    }
 
     if (resp.statusCode != 200) {
       final String snippet = utf8.decode(resp.bodyBytes, allowMalformed: true);

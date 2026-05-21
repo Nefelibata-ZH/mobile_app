@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -83,6 +84,50 @@ class _AiSettingsScreenState extends ConsumerState<AiSettingsScreen> {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
         children: <Widget>[
+          if (kIsWeb)
+            Card(
+              color: Theme.of(context).colorScheme.errorContainer,
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Row(
+                      children: <Widget>[
+                        Icon(
+                          Icons.warning_amber,
+                          size: 18,
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onErrorContainer,
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          '浏览器版本不支持',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onErrorContainer,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      '主流 LLM 服务商（OpenAI、混元、DeepSeek 等）的 API 都未开放浏览器跨域访问 (CORS)，'
+                      '直接在 Web 端调用会被浏览器拦截并报 "Failed to fetch"。'
+                      '请改用桌面端或移动端 App 使用语音记账功能。',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Theme.of(context).colorScheme.onErrorContainer,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          if (kIsWeb) const SizedBox(height: 12),
           Card(
             child: SwitchListTile(
               value: _enabled,
